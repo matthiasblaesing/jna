@@ -23,6 +23,7 @@
  */
 package com.sun.jna;
 
+import com.sun.jna.ptr.BooleanByReference;
 import com.sun.jna.ptr.ByteByReference;
 import com.sun.jna.ptr.DoubleByReference;
 import com.sun.jna.ptr.FloatByReference;
@@ -48,6 +49,7 @@ public class DirectByReferenceArgumentsTest extends ByReferenceArgumentsTest {
         public native void complementFloatByReference(FloatByReference f);
         public native void complementDoubleByReference(DoubleByReference d);
         public native void setPointerByReferenceNull(PointerByReference p);
+        public native void complementBooleanByReference(BooleanByReference b);
 
         static {
             Native.register("testlib");

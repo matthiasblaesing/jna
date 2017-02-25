@@ -31,6 +31,7 @@ extern "C" {
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #if !defined(_WIN32_WCE)
 #include <errno.h>
 #endif
@@ -132,8 +133,8 @@ returnTrue() {
   return -1;
 }
 
-EXPORT int
-returnBooleanArgument(int arg) {
+EXPORT bool
+returnBooleanArgument(bool arg) {
   return arg;
 }
 
@@ -408,6 +409,11 @@ complementFloatByReference(float *arg) {
 EXPORT void 
 complementDoubleByReference(double *arg) {
   if (arg) *arg = -*arg;
+}
+
+EXPORT void 
+complementBooleanByReference(bool *arg) {
+  if (arg) *arg = !*arg;
 }
 
 EXPORT void 
@@ -687,9 +693,9 @@ callVoidCallbackThreaded(void (*func)(void), int n, int ms, const char* name) {
   THREAD_CREATE(&thread, &thread_function, data);
 }
 
-EXPORT int 
-callBooleanCallback(int (*func)(int arg, int arg2),
-                    int arg, int arg2) {
+EXPORT bool 
+callBooleanCallback(bool (*func)(bool arg, bool arg2),
+                    bool arg, bool arg2) {
   return (*func)(arg, arg2);
 }
 

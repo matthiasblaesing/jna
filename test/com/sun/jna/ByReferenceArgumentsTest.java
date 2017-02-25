@@ -23,6 +23,7 @@
  */
 package com.sun.jna;
 
+import com.sun.jna.ptr.BooleanByReference;
 import junit.framework.TestCase;
 import com.sun.jna.ptr.ByteByReference;
 import com.sun.jna.ptr.DoubleByReference;
@@ -49,6 +50,7 @@ public class ByReferenceArgumentsTest extends TestCase {
         void complementFloatByReference(FloatByReference f);
         void complementDoubleByReference(DoubleByReference d);
         void setPointerByReferenceNull(PointerByReference p);
+        void complementBooleanByReference(BooleanByReference b);
     }
 
     TestLibrary lib;
@@ -107,6 +109,15 @@ public class ByReferenceArgumentsTest extends TestCase {
         assertNull("Default pointer should be NULL after call", pref.getValue());
     }
 
+    public void testBooleanByReference() {
+        BooleanByReference bref = new BooleanByReference(true);
+        assertTrue(bref.getValue());
+        lib.complementBooleanByReference(bref);
+        assertFalse("Boolean argument not modified", bref.getValue());
+        lib.complementBooleanByReference(bref);
+        assertTrue("Boolean argument not modified", bref.getValue());
+    }
+    
     public static void main(java.lang.String[] argList) {
         junit.textui.TestRunner.run(ByReferenceArgumentsTest.class);
     }

@@ -1922,8 +1922,26 @@ public abstract class Structure {
             typeInfoMap.put(Pointer.class, FFITypes.ffi_type_pointer);
             typeInfoMap.put(String.class, FFITypes.ffi_type_pointer);
             typeInfoMap.put(WString.class, FFITypes.ffi_type_pointer);
-            typeInfoMap.put(boolean.class, FFITypes.ffi_type_uint32);
-            typeInfoMap.put(Boolean.class, FFITypes.ffi_type_uint32);
+            switch(Native.BOOL_SIZE) {
+                case 1:
+                    typeInfoMap.put(boolean.class, FFITypes.ffi_type_uint8);
+                    typeInfoMap.put(Boolean.class, FFITypes.ffi_type_uint8);
+                    break;
+                case 2:
+                    typeInfoMap.put(boolean.class, FFITypes.ffi_type_uint16);
+                    typeInfoMap.put(Boolean.class, FFITypes.ffi_type_uint16);
+                    break;
+                case 4:
+                    typeInfoMap.put(boolean.class, FFITypes.ffi_type_uint32);
+                    typeInfoMap.put(Boolean.class, FFITypes.ffi_type_uint32);
+                    break;
+                case 8:
+                    typeInfoMap.put(boolean.class, FFITypes.ffi_type_uint64);
+                    typeInfoMap.put(Boolean.class, FFITypes.ffi_type_uint64);
+                    break;
+                default:
+                    throw new IllegalStateException("Unsupported BOOL_SIZE: " + Native.BOOL_SIZE);
+            }
         }
         // From ffi.h
         private static final int FFI_TYPE_STRUCT = 13;
