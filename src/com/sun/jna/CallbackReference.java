@@ -55,8 +55,8 @@ public class CallbackReference extends WeakReference<Callback> {
     // Track memory allocations associated with this closure (usually String args)
     static final Map<Object, Object> allocations = new WeakHashMap<Object, Object>();
     // Global map of allocated closures to facilitate centralized cleanup
-    private static final Map<CallbackReference, Reference<CallbackReference>> allocatedMemory =
-            Collections.synchronizedMap(new WeakHashMap<CallbackReference, Reference<CallbackReference>>());
+    private static final Map<Long, Reference<CallbackReference>> allocatedMemory =
+            Collections.synchronizedMap(new HashMap<Long, Reference<CallbackReference>>());
     private static final Method PROXY_CALLBACK_METHOD;
 
     static {
@@ -165,6 +165,7 @@ public class CallbackReference extends WeakReference<Callback> {
         }
     }
 
+    Cleaner.Cleanable cleanable;
     Pointer cbstruct;
     Pointer trampoline;
     // Keep a reference to the proxy to avoid premature GC of it
@@ -266,7 +267,10 @@ public class CallbackReference extends WeakReference<Callback> {
                                                encoding);
         }
         cbstruct = peer != 0 ? new Pointer(peer) : null;
-        allocatedMemory.put(this, new WeakReference<CallbackReference>(this));
+        if(peer != 0) {
+            allocatedMemory.put(peer, new WeakReference<CallbackReference>(this));
+            cleanable = Cleaner.getCleaner().register(this, new CallbackReferenceDisposer(cbstruct));
+        }
     }
 
     private Class<?> getNativeType(Class<?> cls) {
@@ -374,31 +378,23 @@ public class CallbackReference extends WeakReference<Callback> {
         return trampoline;
     }
 
-    /** Free native resources associated with this callback when GC'd. */
-    @Override
-    protected void finalize() {
-        dispose();
-    }
-
     /** Free native resources associated with this callback. */
     protected synchronized void dispose() {
-        if (cbstruct != null) {
-            try {
-                Native.freeNativeCallback(cbstruct.peer);
-            } finally {
-                cbstruct.peer = 0;
-                cbstruct = null;
-                allocatedMemory.remove(this);
-            }
+        if(cleanable != null) {
+            cleanable.clean();
         }
+        cbstruct = null;
     }
 
     /** Dispose of all memory allocated for callbacks. */
     static void disposeAll() {
         // use a copy since dispose() modifes the map
-        Collection<CallbackReference> refs = new LinkedList<CallbackReference>(allocatedMemory.keySet());
-        for (CallbackReference r : refs) {
-            r.dispose();
+        Collection<Reference<CallbackReference>> refs = new LinkedList<Reference<CallbackReference>>(allocatedMemory.values());
+        for (Reference<CallbackReference> r : refs) {
+            CallbackReference ref = r.get();
+            if(ref != null) {
+                ref.dispose();
+            }
         }
     }
 
@@ -710,5 +706,27 @@ public class CallbackReference extends WeakReference<Callback> {
             return ns.getPointer();
         }
         return null;
+    }
+
+    private static final class CallbackReferenceDisposer implements Runnable {
+
+        private Pointer cbstruct;
+
+        public CallbackReferenceDisposer(Pointer cbstruct) {
+            this.cbstruct = cbstruct;
+        }
+
+        public void run() {
+            if (cbstruct != null) {
+                try {
+                    Native.freeNativeCallback(cbstruct.peer);
+                } finally {
+                    allocatedMemory.remove(cbstruct.peer);
+                    cbstruct.peer = 0;
+                    cbstruct = null;
+                }
+            }
+        }
+
     }
 }

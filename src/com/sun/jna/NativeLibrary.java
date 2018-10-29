@@ -79,6 +79,7 @@ import java.util.StringTokenizer;
  */
 public class NativeLibrary {
 
+    private Cleaner.Cleanable cleanable;
     private long handle;
     private final String libraryName;
     private final String libraryPath;
@@ -88,6 +89,7 @@ public class NativeLibrary {
     final Map<String, ?> options;
 
     private static final Map<String, Reference<NativeLibrary>> libraries = new HashMap<String, Reference<NativeLibrary>>();
+
     private static final Map<String, List<String>> searchPaths = Collections.synchronizedMap(new HashMap<String, List<String>>());
     private static final List<String> librarySearchPath = new ArrayList<String>();
 
@@ -105,6 +107,7 @@ public class NativeLibrary {
         this.libraryName = getLibraryName(libraryName);
         this.libraryPath = libraryPath;
         this.handle = handle;
+        this.cleanable = Cleaner.getCleaner().register(this, new NativeLibraryDisposer(handle));
         Object option = options.get(Library.OPTION_CALLING_CONVENTION);
         int callingConvention = option instanceof Number ? ((Number)option).intValue() : Function.C_CONVENTION;
         this.callFlags = callingConvention;
@@ -616,11 +619,6 @@ public class NativeLibrary {
             return null;
         return new File(libraryPath);
     }
-    /** Close the library when it is no longer referenced. */
-    @Override
-    protected void finalize() {
-        dispose();
-    }
 
     /** Close all open native libraries. */
     static void disposeAll() {
@@ -654,7 +652,7 @@ public class NativeLibrary {
 
         synchronized(this) {
             if (handle != 0) {
-                Native.close(handle);
+                cleanable.clean();
                 handle = 0;
             }
         }
@@ -984,5 +982,25 @@ public class NativeLibrary {
             }
         }
         return ldPaths;
+    }
+
+    private static final class NativeLibraryDisposer implements Runnable {
+
+        private long handle;
+
+        public NativeLibraryDisposer(long handle) {
+            this.handle = handle;
+        }
+
+        public void run() {
+            if (handle != 0) {
+                try {
+                    Native.close(handle);
+                } finally {
+                    handle = 0;
+                }
+            }
+        }
+
     }
 }

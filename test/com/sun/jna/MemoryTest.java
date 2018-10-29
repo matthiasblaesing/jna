@@ -34,20 +34,12 @@ import junit.framework.TestCase;
 public class MemoryTest extends TestCase {
 
     public void testAutoFreeMemory() throws Exception {
-        final boolean[] flag = { false };
-        Memory core = new Memory(10) {
-            @Override
-            protected void finalize() {
-                super.finalize();
-                flag[0] = true;
-            }
-        };
+        Memory core = new Memory(10);
         Pointer shared = core.share(0, 5);
         Reference<Memory> ref = new WeakReference<Memory>(core);
 
         core = null;
         System.gc();
-        assertFalse("Memory prematurely GC'd", flag[0]);
         assertNotNull("Base memory GC'd while shared memory extant", ref.get());
         // Avoid having IBM J9 prematurely nullify "shared"
         shared.setInt(0, 0);

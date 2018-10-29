@@ -26,9 +26,9 @@ import java.lang.ref.WeakReference;
 import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
-import java.util.WeakHashMap;
 
 /**
  * A <code>Pointer</code> to memory obtained from the native heap via a
@@ -43,9 +43,6 @@ import java.util.WeakHashMap;
  *		free(buf);
  * </pre>
  *
- * <p>The {@link #finalize} method will free allocated memory when
- * this object is no longer referenced.
- *
  * @author Sheng Liang, originator
  * @author Todd Fast, suitability modifications
  * @author Timothy Wall
@@ -53,8 +50,8 @@ import java.util.WeakHashMap;
  */
 public class Memory extends Pointer {
     /** Keep track of all allocated memory so we can dispose of it before unloading. */
-    private static final Map<Memory, Reference<Memory>> allocatedMemory =
-            Collections.synchronizedMap(new WeakHashMap<Memory, Reference<Memory>>());
+    private static final Map<Long, Reference<Memory>> allocatedMemory =
+            Collections.synchronizedMap(new HashMap<Long, Reference<Memory>>());
 
     private static final WeakMemoryHolder buffers = new WeakMemoryHolder();
 
@@ -68,12 +65,16 @@ public class Memory extends Pointer {
     /** Dispose of all allocated memory. */
     public static void disposeAll() {
         // use a copy since dispose() modifies the map
-        Collection<Memory> refs = new LinkedList<Memory>(allocatedMemory.keySet());
-        for (Memory r : refs) {
-            r.dispose();
+        Collection<Reference<Memory>> refs = new LinkedList<Reference<Memory>>(allocatedMemory.values());
+        for (Reference<Memory> r : refs) {
+            Memory m = r.get();
+            if(m != null) {
+                m.dispose();
+            }
         }
     }
 
+    private Cleaner.Cleanable cleanable;
     protected long size; // Size of the malloc'ed space
 
     /** Provide a view into the original memory.  Keeps an implicit reference
@@ -114,7 +115,8 @@ public class Memory extends Pointer {
         if (peer == 0)
             throw new OutOfMemoryError("Cannot allocate " + size + " bytes");
 
-        allocatedMemory.put(this, new WeakReference<Memory>(this));
+        allocatedMemory.put(peer, new WeakReference<Memory>(this));
+        cleanable = Cleaner.getCleaner().register(this, new MemoryDisposer(peer));
     }
 
     protected Memory() {
@@ -175,20 +177,10 @@ public class Memory extends Pointer {
         throw new IllegalArgumentException("Byte boundary must be a power of two");
     }
 
-    /** Properly dispose of native memory when this object is GC'd. */
-    @Override
-    protected void finalize() {
-        dispose();
-    }
-
     /** Free the native memory and set peer to zero */
     protected synchronized void dispose() {
-        try {
-            free(peer);
-        } finally {
-            allocatedMemory.remove(this);
-            peer = 0;
-        }
+        cleanable.clean();
+        peer = 0;
     }
 
     /** Zero the full extent of this memory region. */
@@ -724,5 +716,24 @@ public class Memory extends Pointer {
     /** Dumps the contents of this memory object. */
     public String dump() {
         return dump(0, (int)size());
+    }
+
+    private static final class MemoryDisposer implements Runnable {
+
+        private long peer;
+
+        public MemoryDisposer(long peer) {
+            this.peer = peer;
+        }
+
+        public void run() {
+            try {
+                free(peer);
+            } finally {
+                allocatedMemory.remove(peer);
+                peer = 0;
+            }
+        }
+
     }
 }

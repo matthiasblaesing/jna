@@ -2,6 +2,23 @@ NOTE: as of JNA 4.0, JNA is now dual-licensed under LGPL and AL 2.0 (see LICENSE
 
 NOTE: JNI native support is typically incompatible between minor versions, and almost always incompatible between major versions.
 
+Release 6.0.0 (Incompatible changes)
+====================================
+
+Features
+--------
+
+Bug Fixes
+---------
+* [#978](https://github.com/java-native-access/jna/issues/978): Remove use of finalizers in JNA - [@matthiasblaesing](https://github.com/matthiasblaesing).
+
+Breaking Changes
+----------------
+
+* `Memory#dispose`, `CallbackReference#dispose` and `NativeLibrary#dispose`
+   were called by the `Object#finalize` override. These calls were replaced by
+   the use of a cleaner.
+
 Release 5.1.0 (Next release)
 ============================
 
