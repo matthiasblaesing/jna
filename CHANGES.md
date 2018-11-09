@@ -10,7 +10,7 @@ Features
 
 Bug Fixes
 ---------
-* [#978](https://github.com/java-native-access/jna/issues/978): Remove use of finalizers in JNA - [@matthiasblaesing](https://github.com/matthiasblaesing).
+* [#978](https://github.com/java-native-access/jna/issues/978): Remove use of finalizers in JNA and improve concurrency for `Memory`, `CallbackReference` and `NativeLibrary` - [@matthiasblaesing](https://github.com/matthiasblaesing).
 
 Breaking Changes
 ----------------

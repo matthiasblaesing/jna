@@ -45,6 +45,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.StringTokenizer;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Provides management of native library resources.  One instance of this
@@ -90,7 +91,7 @@ public class NativeLibrary {
 
     private static final Map<String, Reference<NativeLibrary>> libraries = new HashMap<String, Reference<NativeLibrary>>();
 
-    private static final Map<String, List<String>> searchPaths = Collections.synchronizedMap(new HashMap<String, List<String>>());
+    private static final Map<String, List<String>> searchPaths = new ConcurrentHashMap<String, List<String>>();
     private static final List<String> librarySearchPath = new ArrayList<String>();
 
     static {
@@ -470,15 +471,13 @@ public class NativeLibrary {
      * @param path The path to use when trying to load the library
      */
     public static final void addSearchPath(String libraryName, String path) {
-        synchronized (searchPaths) {
-            List<String> customPaths = searchPaths.get(libraryName);
-            if (customPaths == null) {
-                customPaths = Collections.synchronizedList(new ArrayList<String>());
-                searchPaths.put(libraryName, customPaths);
-            }
-
-            customPaths.add(path);
+        List<String> customPaths = searchPaths.get(libraryName);
+        if (customPaths == null) {
+            customPaths = Collections.synchronizedList(new ArrayList<String>());
+            searchPaths.put(libraryName, customPaths);
         }
+
+        customPaths.add(path);
     }
 
     /**

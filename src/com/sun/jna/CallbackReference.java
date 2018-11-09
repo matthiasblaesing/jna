@@ -31,7 +31,6 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -42,6 +41,7 @@ import java.util.Set;
 import java.util.WeakHashMap;
 
 import com.sun.jna.win32.DLLCallback;
+import java.util.concurrent.ConcurrentHashMap;
 
 /** Provides a reference to an association between a native callback closure
  * and a Java {@link Callback} closure.
@@ -56,7 +56,7 @@ public class CallbackReference extends WeakReference<Callback> {
     static final Map<Object, Object> allocations = new WeakHashMap<Object, Object>();
     // Global map of allocated closures to facilitate centralized cleanup
     private static final Map<Long, Reference<CallbackReference>> allocatedMemory =
-            Collections.synchronizedMap(new HashMap<Long, Reference<CallbackReference>>());
+            new ConcurrentHashMap<Long, Reference<CallbackReference>>();
     private static final Method PROXY_CALLBACK_METHOD;
 
     static {

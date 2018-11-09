@@ -25,10 +25,9 @@ import java.lang.ref.Reference;
 import java.lang.ref.WeakReference;
 import java.nio.ByteBuffer;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * A <code>Pointer</code> to memory obtained from the native heap via a
@@ -51,7 +50,7 @@ import java.util.Map;
 public class Memory extends Pointer {
     /** Keep track of all allocated memory so we can dispose of it before unloading. */
     private static final Map<Long, Reference<Memory>> allocatedMemory =
-            Collections.synchronizedMap(new HashMap<Long, Reference<Memory>>());
+            new ConcurrentHashMap<Long, Reference<Memory>>();
 
     private static final WeakMemoryHolder buffers = new WeakMemoryHolder();
 
