@@ -991,7 +991,7 @@ public class NativeLibrary {
             this.handle = handle;
         }
 
-        public void run() {
+        public synchronized void run() {
             if (handle != 0) {
                 try {
                     Native.close(handle);

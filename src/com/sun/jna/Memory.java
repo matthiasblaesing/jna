@@ -725,7 +725,7 @@ public class Memory extends Pointer {
             this.peer = peer;
         }
 
-        public void run() {
+        public synchronized void run() {
             try {
                 free(peer);
             } finally {

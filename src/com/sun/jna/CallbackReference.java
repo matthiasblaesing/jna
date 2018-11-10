@@ -716,7 +716,7 @@ public class CallbackReference extends WeakReference<Callback> {
             this.cbstruct = cbstruct;
         }
 
-        public void run() {
+        public synchronized void run() {
             if (cbstruct != null) {
                 try {
                     Native.freeNativeCallback(cbstruct.peer);
