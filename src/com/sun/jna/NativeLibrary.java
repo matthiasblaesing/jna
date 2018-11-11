@@ -26,6 +26,7 @@
 package com.sun.jna;
 
 import java.io.BufferedReader;
+import java.io.Closeable;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
@@ -78,7 +79,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * @author Wayne Meissner, split library loading from Function.java
  * @author twall
  */
-public class NativeLibrary {
+public class NativeLibrary implements Closeable {
 
     private Cleaner.Cleanable cleanable;
     private long handle;
@@ -628,13 +629,13 @@ public class NativeLibrary {
         for (Reference<NativeLibrary> ref : values) {
             NativeLibrary lib = ref.get();
             if (lib != null) {
-                lib.dispose();
+                lib.close();
             }
         }
     }
 
     /** Close the native library we're mapped to. */
-    public void dispose() {
+    public void close() {
         Set<String> keys = new HashSet<String>();
         synchronized(libraries) {
             for (Map.Entry<String, Reference<NativeLibrary>> e : libraries.entrySet()) {
@@ -655,6 +656,11 @@ public class NativeLibrary {
                 handle = 0;
             }
         }
+    }
+
+    @Deprecated
+    public void dispose() {
+        close();
     }
 
     private static List<String> initPaths(String key) {

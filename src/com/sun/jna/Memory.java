@@ -21,6 +21,7 @@
  */
 package com.sun.jna;
 
+import java.io.Closeable;
 import java.lang.ref.Reference;
 import java.lang.ref.WeakReference;
 import java.nio.ByteBuffer;
@@ -47,7 +48,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * @author Timothy Wall
  * @see Pointer
  */
-public class Memory extends Pointer {
+public class Memory extends Pointer implements Closeable {
     /** Keep track of all allocated memory so we can dispose of it before unloading. */
     private static final Map<Long, Reference<Memory>> allocatedMemory =
             new ConcurrentHashMap<Long, Reference<Memory>>();
@@ -68,7 +69,7 @@ public class Memory extends Pointer {
         for (Reference<Memory> r : refs) {
             Memory m = r.get();
             if(m != null) {
-                m.dispose();
+                m.close();
             }
         }
     }
@@ -177,9 +178,14 @@ public class Memory extends Pointer {
     }
 
     /** Free the native memory and set peer to zero */
-    protected synchronized void dispose() {
-        cleanable.clean();
+    public void close() {
         peer = 0;
+        cleanable.clean();
+    }
+
+    @Deprecated
+    protected void dispose() {
+        close();
     }
 
     /** Zero the full extent of this memory region. */

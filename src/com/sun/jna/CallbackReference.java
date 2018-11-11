@@ -41,13 +41,14 @@ import java.util.Set;
 import java.util.WeakHashMap;
 
 import com.sun.jna.win32.DLLCallback;
+import java.io.Closeable;
 import java.util.concurrent.ConcurrentHashMap;
 
 /** Provides a reference to an association between a native callback closure
  * and a Java {@link Callback} closure.
  */
 
-public class CallbackReference extends WeakReference<Callback> {
+public class CallbackReference extends WeakReference<Callback> implements Closeable {
 
     static final Map<Callback, CallbackReference> callbackMap = new WeakHashMap<Callback, CallbackReference>();
     static final Map<Callback, CallbackReference> directCallbackMap = new WeakHashMap<Callback, CallbackReference>();
@@ -379,11 +380,16 @@ public class CallbackReference extends WeakReference<Callback> {
     }
 
     /** Free native resources associated with this callback. */
-    protected synchronized void dispose() {
-        if(cleanable != null) {
+    public void close() {
+        if (cleanable != null) {
             cleanable.clean();
         }
         cbstruct = null;
+    }
+
+    @Deprecated
+    protected void dispose() {
+        close();
     }
 
     /** Dispose of all memory allocated for callbacks. */
@@ -393,7 +399,7 @@ public class CallbackReference extends WeakReference<Callback> {
         for (Reference<CallbackReference> r : refs) {
             CallbackReference ref = r.get();
             if(ref != null) {
-                ref.dispose();
+                ref.close();
             }
         }
     }
