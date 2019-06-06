@@ -207,16 +207,19 @@ public class ArgumentsMarshalNullableTest extends TestCase {
 
     public void testNativeMapped() {
         assertEquals("Basic non-null call", new Int16NativeMapped(42), lib.returnInt16Argument(new Int16NativeMapped(42)));
+        assertEquals("Negative value call", new Int16NativeMapped(-42), lib.returnInt16Argument(new Int16NativeMapped(-42)));
         assertEquals("null call", new Int16NativeMapped(0), lib.returnInt16Argument((Int16NativeMapped) null));
     }
 
     public void testIntegerType() {
         assertEquals("Basic non-null call", new Int16Integer(42), lib.returnInt16Argument(new Int16Integer(42)));
+        assertEquals("Negative value call", new Int16Integer(-42), lib.returnInt16Argument(new Int16Integer(-42)));
         assertEquals("null call", new Int16Integer(0), lib.returnInt16Argument((Int16Integer) null));
     }
 
     public void testTypeMapper() {
         assertEquals("Basic non-null call", new Int16(42), lib.returnInt16Argument(new Int16(42)));
+        assertEquals("Negative value call", new Int16(-42), lib.returnInt16Argument(new Int16(-42)));
         assertEquals("null call", new Int16(0), lib.returnInt16Argument((Int16) null));
     }
 
