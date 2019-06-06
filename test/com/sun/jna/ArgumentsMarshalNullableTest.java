@@ -32,31 +32,31 @@ import junit.framework.TestCase;
  * and result in deterministic behaviour and not in a JVM crash.
  */
 public class ArgumentsMarshalNullableTest extends TestCase {
-    public static class Int32Integer extends IntegerType {
+    public static class Int16Integer extends IntegerType {
 
-        public Int32Integer() {
-            super(4);
+        public Int16Integer() {
+            super(2);
         }
 
-        public Int32Integer(long value) {
-            super(4, value);
+        public Int16Integer(long value) {
+            super(2, value);
         }
 
     }
 
 
-    public static class Int32NativeMapped implements NativeMapped {
+    public static class Int16NativeMapped implements NativeMapped {
         private int value;
 
-        public Int32NativeMapped() {};
+        public Int16NativeMapped() {};
 
-        public Int32NativeMapped(int value) {
+        public Int16NativeMapped(int value) {
             this.value = value;
         }
 
         public Object fromNative(Object nativeValue, FromNativeContext context) {
             if(nativeValue instanceof Integer) {
-                return new Int32NativeMapped((Integer) nativeValue);
+                return new Int16NativeMapped((Integer) nativeValue);
             } else {
                 return null;
             }
@@ -72,7 +72,7 @@ public class ArgumentsMarshalNullableTest extends TestCase {
 
         @Override
         public String toString() {
-            return "Int32NativeMapped{" + "value=" + value + '}';
+            return "Int16NativeMapped{" + "value=" + value + '}';
         }
 
         @Override
@@ -93,7 +93,7 @@ public class ArgumentsMarshalNullableTest extends TestCase {
             if (getClass() != obj.getClass()) {
                 return false;
             }
-            final Int32NativeMapped other = (Int32NativeMapped) obj;
+            final Int16NativeMapped other = (Int16NativeMapped) obj;
             if (this.value != other.value) {
                 return false;
             }
@@ -101,11 +101,11 @@ public class ArgumentsMarshalNullableTest extends TestCase {
         }
     }
 
-    public static class Int32 {
+    public static class Int16 {
         public static final FromNativeConverter fromNative = new FromNativeConverter() {
             public Object fromNative(Object nativeValue, FromNativeContext context) {
                 if (nativeValue instanceof Integer) {
-                    return new Int32((Integer) nativeValue);
+                    return new Int16((Integer) nativeValue);
                 } else {
                     return null;
                 }
@@ -121,7 +121,7 @@ public class ArgumentsMarshalNullableTest extends TestCase {
                 if(value == null) {
                     return 0;
                 } else {
-                    return ((Int32) value).value;
+                    return ((Int16) value).value;
                 }
             }
 
@@ -132,10 +132,10 @@ public class ArgumentsMarshalNullableTest extends TestCase {
 
         private int value;
 
-        public Int32() {
+        public Int16() {
         }
 
-        public Int32(int value) {
+        public Int16(int value) {
             this.value = value;
         }
 
@@ -157,7 +157,7 @@ public class ArgumentsMarshalNullableTest extends TestCase {
             if (getClass() != obj.getClass()) {
                 return false;
             }
-            final Int32 other = (Int32) obj;
+            final Int16 other = (Int16) obj;
             if (this.value != other.value) {
                 return false;
             }
@@ -166,14 +166,14 @@ public class ArgumentsMarshalNullableTest extends TestCase {
 
         @Override
         public String toString() {
-            return "Int32{" + "value=" + value + '}';
+            return "Int16{" + "value=" + value + '}';
         }
     }
 
     public static interface TestLibrary extends Library {
-        Int32NativeMapped returnInt32Argument(Int32NativeMapped i);
-        Int32Integer returnInt32Argument(Int32Integer i);
-        Int32 returnInt32Argument(Int32 i);
+        Int16NativeMapped returnInt16Argument(Int16NativeMapped i);
+        Int16Integer returnInt16Argument(Int16Integer i);
+        Int16 returnInt16Argument(Int16 i);
     }
 
     TestLibrary lib;
@@ -182,16 +182,16 @@ public class ArgumentsMarshalNullableTest extends TestCase {
         lib = Native.load("testlib", TestLibrary.class,
                 Collections.singletonMap(Library.OPTION_TYPE_MAPPER, new TypeMapper() {
                     public FromNativeConverter getFromNativeConverter(Class<?> javaType) {
-                        if(javaType == Int32.class) {
-                            return Int32.fromNative;
+                        if(javaType == Int16.class) {
+                            return Int16.fromNative;
                         } else {
                             return null;
                         }
                     }
 
                     public ToNativeConverter getToNativeConverter(Class<?> javaType) {
-                        if(javaType == Int32.class) {
-                            return Int32.toNative;
+                        if(javaType == Int16.class) {
+                            return Int16.toNative;
                         } else {
                             return null;
                         }
@@ -206,18 +206,18 @@ public class ArgumentsMarshalNullableTest extends TestCase {
 
 
     public void testNativeMapped() {
-        assertEquals("Basic non-null call", new Int32NativeMapped(42), lib.returnInt32Argument(new Int32NativeMapped(42)));
-        assertEquals("null call", new Int32NativeMapped(0), lib.returnInt32Argument((Int32NativeMapped) null));
+        assertEquals("Basic non-null call", new Int16NativeMapped(42), lib.returnInt16Argument(new Int16NativeMapped(42)));
+        assertEquals("null call", new Int16NativeMapped(0), lib.returnInt16Argument((Int16NativeMapped) null));
     }
 
     public void testIntegerType() {
-        assertEquals("Basic non-null call", new Int32Integer(42), lib.returnInt32Argument(new Int32Integer(42)));
-        assertEquals("null call", new Int32Integer(0), lib.returnInt32Argument((Int32Integer) null));
+        assertEquals("Basic non-null call", new Int16Integer(42), lib.returnInt16Argument(new Int16Integer(42)));
+        assertEquals("null call", new Int16Integer(0), lib.returnInt16Argument((Int16Integer) null));
     }
 
     public void testTypeMapper() {
-        assertEquals("Basic non-null call", new Int32(42), lib.returnInt32Argument(new Int32(42)));
-        assertEquals("null call", new Int32(0), lib.returnInt32Argument((Int32) null));
+        assertEquals("Basic non-null call", new Int16(42), lib.returnInt16Argument(new Int16(42)));
+        assertEquals("null call", new Int16(0), lib.returnInt16Argument((Int16) null));
     }
 
     public static void main(java.lang.String[] argList) {
