@@ -31,6 +31,7 @@ extern "C" {
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #if !defined(_WIN32_WCE)
 #include <errno.h>
 #endif
@@ -962,6 +963,23 @@ int stringifyMixedUnion1(
             "dummyInt1: %d, dummyDouble1: %.0f, dummyInt2: %d, dummyDouble2: %.0f, union1.intValue: %d, union2.doubleValue: %.0f",
             dummyInt1, dummyDouble1, dummyInt2, dummyDouble2,
             union1.intValue, union2.doubleValue);
+}
+
+typedef struct _BooleanStruct {
+    char* s1;
+    int s2;
+    double s3;
+    bool s4;
+    double s5;
+    int s6;
+} BooleanStruct;
+
+EXPORT
+int stringifyBooleanStruct(char* buffer, int bufferLength, BooleanStruct* s) {
+    return snprintf(
+            buffer, bufferLength - 1,
+            "s1: %s, s2: %d, s3: %.2f, s4: %d, s5: %.2f, s6: %d",
+            s->s1, s->s2, s->s3, s->s4, s->s5, s->s6);
 }
 
 #if defined(_WIN32) && !defined(_WIN64) && !defined(_WIN32_WCE)
