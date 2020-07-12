@@ -100,9 +100,15 @@ static inline char * STR_ERROR(int code, char * buf, size_t len) {
 #include <jni.h>
 
 #ifndef NO_JAWT
+#ifdef __APPLE__
+#include <JavaNativeFoundation/JavaNativeFoundation.h>
+#else /* __APPLE__ */
 #include <jawt.h>
 #include <jawt_md.h>
-#endif
+#endif /* __APPLE_ */
+#endif /* NO_JAWT */
+
+
 
 #ifdef HAVE_PROTECTION
 // When we have SEH, default to protection on
@@ -3061,6 +3067,27 @@ JNIEXPORT jlong JNICALL
 Java_com_sun_jna_Native_getWindowHandle0(JNIEnv* UNUSED_JAWT(env), jclass UNUSED(classp), jobject UNUSED_JAWT(w)) {
   jlong handle = 0;
 #ifndef NO_JAWT
+#ifdef __APPLE__
+    JNF_COCOA_ENTER(env);
+    jclass class_window = env->GetObjectClass(w);
+    jfieldID fid_peer = env->GetFieldID(class_window, "peer", "Ljava/awt/peer/ComponentPeer;");
+
+    if (!fid_peer) return 0;
+    jobject peer = env->GetObjectField(window, fid_peer);
+
+    if (!peer) return 0;
+    jclass class_peer = env->GetObjectClass(peer);
+    jfieldID fid_platformWindow = env->GetFieldID(class_peer, "platformWindow", "Lsun/lwawt/PlatformWindow;");
+
+    if (!fid_platformWindow) return 0;
+    jobject platformWindow = env->GetObjectField(peer, fid_platformWindow);
+
+    if (!platformWindow) return 0;
+    jclass class_platformWindow = env->GetObjectClass(platformWindow);
+    jfieldID fid_ptr = env->GetFieldID(class_platformWindow, "ptr", "J");
+    jlong ptr = env->GetLongField(platformWindow, fid_ptr);
+    handle = (jlong) ptr;
+#else /* __APPLE */
   JAWT_DrawingSurface* ds;
   JAWT_DrawingSurfaceInfo* dsi;
   jint lock;
@@ -3148,20 +3175,6 @@ Java_com_sun_jna_Native_getWindowHandle0(JNIEnv* UNUSED_JAWT(env), jclass UNUSED
       else {
         throwByName(env, EError, "Can't get w32 platform info");
       }
-#elif __APPLE__
-      // WARNING: the view ref is not guaranteed to be stable except during
-      // component paint (see jni_md.h)
-      JAWT_MacOSXDrawingSurfaceInfo* mdsi =
-        (JAWT_MacOSXDrawingSurfaceInfo*)dsi->platformInfo;
-      if (mdsi != NULL) {
-        handle = (unsigned long)mdsi->cocoaViewRef;
-        if (!handle) {
-          throwByName(env, EIllegalState, "Can't get Cocoa View");
-        }
-      }
-      else {
-        throwByName(env, EError, "Can't get OS X platform info");
-      }
 #else
       JAWT_X11DrawingSurfaceInfo* xdsi =
         (JAWT_X11DrawingSurfaceInfo*)dsi->platformInfo;
@@ -3180,6 +3193,7 @@ Java_com_sun_jna_Native_getWindowHandle0(JNIEnv* UNUSED_JAWT(env), jclass UNUSED
     ds->Unlock(ds);
     awt.FreeDrawingSurface(ds);
   }
+#endif /* __APPLE__ */
 #endif /* NO_JAWT */
   return handle;
 }
