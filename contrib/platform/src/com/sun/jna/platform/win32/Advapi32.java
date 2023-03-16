@@ -3324,8 +3324,10 @@ public interface Advapi32 extends StdCallLibrary {
      * <tr><td>ERROR_SERVICE_NOT_IN_EXE</td><td>The service entry was specified incorrectly when the process called the {@link #StartServiceCtrlDispatcher} function.</td></tr>
      * </table>
      */
-    public SERVICE_STATUS_HANDLE RegisterServiceCtrlHandler(String lpServiceName,
-            Handler lpHandlerProc);
+    public SERVICE_STATUS_HANDLE RegisterServiceCtrlHandler(
+            String lpServiceName,
+            Winsvc.Handler lpHandlerProc
+    );
 
     /**
      * Registers a function to handle extended service control requests.

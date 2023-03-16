@@ -53,14 +53,39 @@ public class W32ServiceTest extends TestCase {
         // - com.sun.jna.platform.win32.Advapi32.DeleteService
         // - com.sun.jna.platform.win32.Advapi32.SERVICE_DESCRIPTION
         Win32ServiceDemo.uninstall();
-        assertTrue(Win32ServiceDemo.install());
+        assertTrue(Win32ServiceDemo.install(true));
         assertTrue(Win32ServiceDemo.uninstall());
     }
 
     public void testControlService() {
         // Cleanup in case of an unsuccessful previous run
         Win32ServiceDemo.uninstall();
-        Win32ServiceDemo.install();
+        Win32ServiceDemo.install(false);
+        // This test implicitly tests the "service side" functions/members:
+        // - com.sun.jna.platform.win32.Advapi32.StartServiceCtrlDispatcher
+        // - com.sun.jna.platform.win32.Advapi32.SERVICE_TABLE_ENTRY
+        // - com.sun.jna.platform.win32.Advapi32.RegisterServiceCtrlHandler
+        // - com.sun.jna.platform.win32.Advapi32.SetServiceStatus
+        // - com.sun.jna.platform.win32.Advapi32.SERVICE_MAIN_FUNCTION
+        // - com.sun.jna.platform.win32.Advapi32.Handler
+        // - com.sun.jna.platform.win32.Advapi32.SERVICE_STATUS_HANDLE
+        W32Service service = _serviceManager.openService(Win32ServiceDemo.serviceName, Winsvc.SERVICE_ALL_ACCESS);
+        service.startService();
+        assertEquals(service.queryStatus().dwCurrentState, Winsvc.SERVICE_RUNNING);
+        service.pauseService();
+        assertEquals(service.queryStatus().dwCurrentState, Winsvc.SERVICE_PAUSED);
+        service.continueService();
+        assertEquals(service.queryStatus().dwCurrentState, Winsvc.SERVICE_RUNNING);
+        service.stopService();
+        assertEquals(service.queryStatus().dwCurrentState, Winsvc.SERVICE_STOPPED);
+        service.close();
+        Win32ServiceDemo.uninstall();
+    }
+
+    public void testControlServiceEx() {
+        // Cleanup in case of an unsuccessful previous run
+        Win32ServiceDemo.uninstall();
+        Win32ServiceDemo.install(true);
         // This test implicitly tests the "service side" functions/members:
         // - com.sun.jna.platform.win32.Advapi32.StartServiceCtrlDispatcher
         // - com.sun.jna.platform.win32.Advapi32.SERVICE_TABLE_ENTRY

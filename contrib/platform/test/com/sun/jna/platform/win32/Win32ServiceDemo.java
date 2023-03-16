@@ -24,6 +24,7 @@ package com.sun.jna.platform.win32;
 
 import com.sun.jna.Native;
 import com.sun.jna.Pointer;
+import com.sun.jna.platform.win32.Winsvc.Handler;
 import com.sun.jna.platform.win32.Winsvc.HandlerEx;
 import com.sun.jna.platform.win32.Winsvc.SC_HANDLE;
 import com.sun.jna.platform.win32.Winsvc.SERVICE_DESCRIPTION;
@@ -51,22 +52,23 @@ public class Win32ServiceDemo {
      * @param args arguments
      */
     public static void main(String[] args) {
-        Win32ServiceDemo service = new Win32ServiceDemo();
-
-        if (args.length == 1) {
-            if (args[0].equalsIgnoreCase("install")) {
-                System.out.println(Win32ServiceDemo.install());
-            } else if (args[0].equalsIgnoreCase("uninstall")) {
-                System.out.println(Win32ServiceDemo.uninstall());
-            } else {
-                System.out.println("Arguments:");
-                System.out.println("install   = install service");
-                System.out.println("uninstall = uninstall service");
-                System.out.println("<none>    = run service");
-                System.exit(0);
-            }
-        } else {
+        if (args.length > 0 && args[0].equalsIgnoreCase("install")) {
+            System.out.println(Win32ServiceDemo.install(true));
+        } else if (args.length > 0 && args[0].equalsIgnoreCase("uninstall")) {
+            System.out.println(Win32ServiceDemo.uninstall());
+        } else if (args.length > 0 && args[0].equalsIgnoreCase("run")) {
+            Win32ServiceDemo service = new Win32ServiceDemo(false);
             service.init();
+        } else if (args.length > 0 && args[0].equalsIgnoreCase("runEx")) {
+            Win32ServiceDemo service = new Win32ServiceDemo(true);
+            service.init();
+        } else {
+            System.out.println("Arguments:");
+            System.out.println("install   = install service");
+            System.out.println("uninstall = uninstall service");
+            System.out.println("run       = run service (using Handler interface)");
+            System.out.println("runEx     = run service (using HandlerEx interface)");
+            System.exit(0);
         }
     }
 
@@ -81,19 +83,30 @@ public class Win32ServiceDemo {
     }
 
     private final Object waitObject = new Object();
+    private final boolean useHandlerEx;
     private ServiceMain serviceMain;
-    private ServiceControl serviceControl;
+    // we need to keep a reference to the  ServiceControl object around. It is
+    // assumed, that he JVM will not collect the created object prematurely as
+    // it can't analyse native code and native code could access this member
+    private Object serviceControl;
     private SERVICE_STATUS_HANDLE serviceStatusHandle;
 
-    public Win32ServiceDemo() {
+    public Win32ServiceDemo(boolean useHandlerEx) {
+        this.useHandlerEx = useHandlerEx;
     }
 
     /**
      * Install the service.
      *
+     * @param useHandlerEx if {@code false}
+     * {@link com.sun.jna.platform.win32.Advapi32#RegisterServiceCtrlHandler}
+     * and {@link com.sun.jna.platform.win32.Winsvc.Handler} are used. If
+     * {@code true}
+     * {@link com.sun.jna.platform.win32.Advapi32#RegisterServiceCtrlHandlerEx}
+     * and {@link com.sun.jna.platform.win32.Winsvc.HandlerEx} are used
      * @return true on success
      */
-    public static boolean install() {
+    public static boolean install(boolean useHandlerEx) {
         boolean success = false;
 
         // It is assumed, that the ClassLoader loading Win32ServiceDemo for the
@@ -129,9 +142,10 @@ public class Win32ServiceDemo {
             javaBinary = "java.exe";
         }
 
-        invocation = String.format("%s -Djna.nosys=true -cp %s com.sun.jna.platform.win32.Win32ServiceDemo",
+        invocation = String.format("%s -cp %s com.sun.jna.platform.win32.Win32ServiceDemo %s",
                 javaBinary,
-                sb.toString());
+                sb.toString(),
+                useHandlerEx ? "runEx" : "run");
         System.out.println("Invocation: " + invocation);
 
         SERVICE_DESCRIPTION desc = new SERVICE_DESCRIPTION();
@@ -328,8 +342,15 @@ public class Win32ServiceDemo {
          * @param lpszArgv pointer to arguments
          */
         public void callback(int dwArgc, Pointer lpszArgv) {
-            serviceControl = new ServiceControl();
-            serviceStatusHandle = Advapi32.INSTANCE.RegisterServiceCtrlHandlerEx(serviceName, serviceControl, null);
+            if(useHandlerEx) {
+                ServiceControlEx serviceControlObj = new ServiceControlEx();
+                serviceStatusHandle = Advapi32.INSTANCE.RegisterServiceCtrlHandlerEx(serviceName, serviceControlObj, null);
+                serviceControl = serviceControlObj;
+            } else {
+                ServiceControl serviceControlObj = new ServiceControl();
+                serviceStatusHandle = Advapi32.INSTANCE.RegisterServiceCtrlHandler(serviceName, serviceControlObj);
+                serviceControl = serviceControlObj;
+            }
 
             reportStatus(Winsvc.SERVICE_START_PENDING, WinError.NO_ERROR, 25000);
 
@@ -354,7 +375,37 @@ public class Win32ServiceDemo {
     /**
      * Implementation of the service control function.
      */
-    private class ServiceControl implements HandlerEx {
+    private class ServiceControl implements Handler {
+
+        /**
+         * Called when the service get a control code.
+         *
+         * @param dwControl
+         */
+        @Override
+        public void callback(int dwControl) {
+            switch (dwControl) {
+                case Winsvc.SERVICE_CONTROL_STOP:
+                case Winsvc.SERVICE_CONTROL_SHUTDOWN:
+                    onStop();
+                    synchronized (waitObject) {
+                        waitObject.notifyAll();
+                    }
+                    break;
+                case Winsvc.SERVICE_CONTROL_PAUSE:
+                    onPause();
+                    break;
+                case Winsvc.SERVICE_CONTROL_CONTINUE:
+                    onContinue();
+                    break;
+            }
+        }
+    }
+
+    /**
+     * Implementation of the service control function.
+     */
+    private class ServiceControlEx implements HandlerEx {
 
         /**
          * Called when the service get a control code.
@@ -364,6 +415,7 @@ public class Win32ServiceDemo {
          * @param lpEventData
          * @param lpContext
          */
+        @Override
         public int callback(int dwControl, int dwEventType, Pointer lpEventData, Pointer lpContext) {
             switch (dwControl) {
                 case Winsvc.SERVICE_CONTROL_STOP:
